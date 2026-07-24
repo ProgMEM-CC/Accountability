@@ -470,6 +470,7 @@ async fn scrape_browsec_safe() -> Vec<reqwest::Proxy> {
 /// retries (counter-rotated nonces, fixed username) stay deterministic.
 pub async fn attempt_create_account(
     username_override: Option<&str>,
+    skin: Option<&str>,
     nonce: &str,
     client: &reqwest::Client,
 ) -> AttemptOutcome {
@@ -479,7 +480,7 @@ pub async fn attempt_create_account(
 
     let body = json!({
         "username": username,
-        "skin": DEFAULT_SKIN,
+        "skin": skin.unwrap_or(DEFAULT_SKIN),
         "nonce": nonce,
         "ctree": 0.5,
     });

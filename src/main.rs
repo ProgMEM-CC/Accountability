@@ -94,6 +94,9 @@ async fn request(
     ctx: BotCtx<'_>,
     #[description = "Username (leave empty for a random one)"]
     username: Option<String>,
+
+    #[description = "Skin (leave empty for default skin Bob)"]
+    skin: Option<String>,
 ) -> Result<(), Error> {
     if let Err(e) = ctx.defer().await {
         log::error("commands::request", &format!("could not defer reply: {e}"));
@@ -106,8 +109,9 @@ async fn request(
     log::info(
         "commands::request",
         &format!(
-            "received /request (username={}, max_retries={})",
+            "received /request (username={}, skin={}, max_retries={})",
             username_override.unwrap_or("(random)"),
+            skin.as_deref().unwrap_or("(default)"),
             max_retries,
         ),
     );
@@ -179,6 +183,7 @@ async fn request(
         'inner: loop {
             let outcome = miniblox::attempt_create_account(
                 username_override,
+                skin.as_deref(),
                 &nonce,
                 &client,
             )
