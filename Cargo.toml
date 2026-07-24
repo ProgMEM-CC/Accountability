@@ -1,0 +1,73 @@
+[package]
+name = "miniblox-accgen-bot"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+description = "Discord bot that generates miniblox.io guest accounts. Rust port of the AccGen TypeScript project."
+license = "MIT"
+
+[[bin]]
+name = "miniblox-accgen-bot"
+path = "src/main.rs"
+
+[features]
+# VPN/proxy support via direct calls to the three pxscrape-* provider
+# crates. We do NOT use `pxscrape-conglomerate`'s umbrella `get_proxies`
+# because it awaits sand -> urban -> browsec sequentially and any panic
+# in one provider unwinds the whole function, losing the other two's
+# contributions. Instead we call each provider in its own panic-safe
+# spawn and merge the survivors -- this way a browsec upstream Decode
+# panic doesn't strip our usable sand/urban proxies.
+default = []
+pxscrape-conglomerate = [
+    "dep:pxscrape-sand",
+    "dep:pxscrape-browsec",
+    "dep:pxscrape-urban",
+
+]
+
+[dependencies]
+# Discord framework (slash commands + embeds) -- built on serenity.
+# Poise re-exports serenity; we declare the matching serenity version
+# below so we can pin `rustls_backend` (poise does not expose this
+# feature directly).
+poise = { version = "0.6", default-features = false }
+serenity = { version = "0.12", default-features = false, features = [
+    "client",
+    "gateway",
+    "rustls_backend",
+    "model",
+] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "time"] }
+
+# HTTP / env / RNG. The `socks` feature is enabled so PROXY_URL / PROXY_POOL
+# can point at SOCKS5 endpoints, which is what most "VPN" providers expose.
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+    "socks",
+] }
+dotenvy = "0.15"
+rand = "0.8"
+
+# Serialisation for the miniblox.io POST body + response parsing.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# VPN / proxy support -- requested by user. We import each provider
+# crate directly (not through pxscrape-conglomerate) so we can isolate
+# each provider's panics via `tokio::spawn` + outer `tokio::spawn`
+# guard. `proxy-types` is the lightweight enum used to format reqwest
+# Proxy URLs.
+pxscrape-sand = { version = "0.1", optional = true }
+pxscrape-urban = { version = "0.1", optional = true }
+pxscrape-browsec = { version = "0.1", optional = true }
+
+anyhow = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
